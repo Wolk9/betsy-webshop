@@ -10,22 +10,22 @@ class BaseModel(Model):
         database = db
 
 # User model
-class User(BaseModel):
+class Users(BaseModel):
     name = CharField()
     address = CharField()
     billing_info = CharField()
 
 # Tag model
-class Tag(BaseModel):
+class Tags(BaseModel):
     name = CharField(unique=True)
 
 # Product model
-class Product(BaseModel):
+class Products(BaseModel):
     name = CharField()
     description = CharField()
     price = DecimalField(decimal_places=2)  # Safeguard against rounding errors
     quantity = IntegerField()
-    owner = ForeignKeyField(User, backref='products')
+
 
     class Meta:
         indexes = (
@@ -33,16 +33,17 @@ class Product(BaseModel):
         )
 
 # Product-Tag Relationship
-class ProductTag(BaseModel):
-    product = ForeignKeyField(Product, backref='tags')
-    tag = ForeignKeyField(Tag, backref='products')
+class ProductTags(BaseModel):
+    product = ForeignKeyField(Products, backref='tags')
+    tag = ForeignKeyField(Tags, backref='products')
 
 # Transaction model
-class Transaction(BaseModel):
-    buyer = ForeignKeyField(User, backref='transactions')
-    product = ForeignKeyField(Product, backref='transactions')
+class Transactions(BaseModel):
+    buyer = ForeignKeyField(Users, backref='transactions')
+    product = ForeignKeyField(Products, backref='transactions')
     quantity = IntegerField()
 
 # Create tables
-db.connect()
-db.create_tables([User, Tag, Product, ProductTag, Transaction])
+def init_database():
+    db.connect()
+    db.create_tables([Users, Tags, Products, ProductTags, Transactions])

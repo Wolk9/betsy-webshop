@@ -5,73 +5,85 @@ __human_name__ = "Betsy Webshop"
 # Add your code after this line
 
 
-from models import db, User, Tag, Product, ProductTag, Transaction
+from models import db, Users, Tags, Products, ProductTags, Transactions
 from peewee import fn
+
+
+def main() -> None:
+    populate_test_database()
+    search_products('sweater')
+    view_user_products(1)
+    
 
 # Populating test data
 def populate_test_database():
     # Check if the database is already populated
-    try:
-        user = User.select().get()
+    if Users.select().exists():
         print("Database already populated. Skipping population.")
         return
-    except User.DoesNotExist:
+    else:
         print("Database is empty. Populating with test data.")
         
-    alice = User.create(name="Alice", address="123 Main St", billing_info="VISA 1234")
-    bob = User.create(name="Bob", address="456 High St", billing_info="AMEX 5678")
+    alice = Users.create(name="Alice", address="123 Main St", billing_info="VISA 1234")
+    bob = Users.create(name="Bob", address="456 High St", billing_info="AMEX 5678")
     
-    sweater_tag = Tag.create(name="sweater")
-    gift_tag = Tag.create(name="gift")
+    sweater_tag = Tags.create(name="sweater")
+    gift_tag = Tags.create(name="gift")
 
-    sweater = Product.create(name="Cool Sweater", description="Very cool", price=59.99, quantity=20, owner=alice)
-    ProductTag.create(product=sweater, tag=sweater_tag)
-    ProductTag.create(product=sweater, tag=gift_tag)
+    sweater = Products.create(name="Cool Sweater", description="Very cool", price=59.99, quantity=20, owner=alice)
+    ProductTags.create(product=sweater, tag=sweater_tag)
+    ProductTags.create(product=sweater, tag=gift_tag)
 
 
 # Search products based on term
 def search_products(term):
-    query = Product.select().where(
-        (fn.Lower(Product.name).contains(term.lower())) | 
-        (fn.Lower(Product.description).contains(term.lower()))
+    query = Products.select().where(
+        (fn.Lower(Products.name).contains(term.lower())) | 
+        (fn.Lower(Products.description).contains(term.lower()))
     )
-    return query
+    for product in query:
+        print(product.name)
+
 
 # View products of a given user
 def view_user_products(user):
-    return Product.select().where(Product.owner == user)
+    query = Products.select().where(Products.owner == user)
+    for product in query:
+        print(product.name)
 
 # View all products for a given tag
 def view_products_by_tag(tag):
-    return Product.select().join(ProductTag).where(ProductTag.tag == tag)
+    query = Products.select().join(ProductTags).where(ProductTags.tag == tag)
+    for product in query:
+        print(product.name)
 
 # Add a product to a user
 def add_product_to_user(user, name, description, price, quantity):
-    return Product.create(name=name, description=description, price=price, quantity=quantity, owner=user)
+    Product.create(name=name, description=description, price=price, quantity=quantity, owner=user)
 
 # Remove a product from a user
 def remove_product_from_user(user, product):
-    product.delete_instance()
+    products = Products.select().where(Products.owner == user)
+    for p in products:
+        if p.name == product.name:
+            p.delete_instance()
 
-# Update the stock quantity of a product
-def update_product_quantity(product, new_quantity):
-    product.quantity = new_quantity
-    product.save()
+# Update the stock quantity of a product by name
+def update_product_quantity(product_name, new_quantity):
+    try:
+        product = Products.get(Products.name == product_name)
+        product.quantity = new_quantity
+        product.save()
+    except Products.DoesNotExist:
+        print(f"Product with name {product_name} does not exist.")
 
 # Handle a purchase between a buyer and a seller
 def handle_purchase(buyer, product, quantity):
     if product.quantity >= quantity:
-        Transaction.create(buyer=buyer, product=product, quantity=quantity)
+        Transactions.create(buyer=buyer, product=product, quantity=quantity)
         product.quantity -= quantity
         product.save()
+        
 
-# Populate the test database
-populate_test_database()
-
-# Example queries
-for product in search_products('sweater'):
-    print(product.name)
-
-for product in view_user_products(User.get(User.name == "Bob")):
-    print(product.name)
-
+if __name__ == '__main__':
+    main()
